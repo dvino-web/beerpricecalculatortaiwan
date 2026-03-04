@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Precios – Cerveza Húngara → Taiwan</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C8A84B; --gold-light: #E8C96A;
+    --dark: #0F0E0B; --panel: #1A1814; --panel2: #221F19;
+    --border: #2E2A22; --text: #E8E0D0; --muted: #7A7060;
+    --red: #E05535; --green: #5BAD6F; --blue: #4A9BDF;
+    --blue-dim: rgba(74,155,223,0.08); --gold-dim: rgba(200,168,75,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--dark); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:13px; min-height:100vh; }
+
+  .header { background:linear-gradient(135deg,#1A1814 0%,#0F0E0B 100%); border-bottom:1px solid var(--gold); padding:24px 28px 18px; position:relative; overflow:hidden; }
+  .header::before { content:''; position:absolute; top:0; right:0; width:400px; height:100%; background:radial-gradient(ellipse at 80% 50%,rgba(200,168,75,0.07) 0%,transparent 70%); pointer-events:none; }
+  .header-label { font-family:'Syne',sans-serif; font-size:10px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; margin-bottom:5px; }
+  .header h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:#fff; }
+  .header h1 span { color:var(--gold); }
+  .route { margin-top:8px; display:flex; align-items:center; gap:8px; font-size:10px; color:var(--muted); letter-spacing:1px; flex-wrap:wrap; }
+  .rdot { width:5px; height:5px; border-radius:50%; background:var(--gold); flex-shrink:0; }
+  .rline { width:24px; height:1px; background:linear-gradient(to right,var(--gold),transparent); }
+
+  .mode-bar { display:flex; gap:0; border-bottom:1px solid var(--border); background:var(--panel2); padding:0 28px; }
+  .mode-tab { padding:12px 20px; font-family:'Syne',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; user-select:none; white-space:nowrap; }
+  .mode-tab:hover { color:var(--text); }
+  .mode-tab.active-a { color:var(--gold); border-bottom-color:var(--gold); }
+  .mode-tab.active-b { color:var(--blue); border-bottom-color:var(--blue); }
+  .mode-tab.active-c { color:var(--green); border-bottom-color:var(--green); }
+  .mode-sep { width:1px; background:var(--border); margin:8px 0; }
+
+  .container { max-width:1200px; margin:0 auto; padding:20px 16px; display:grid; grid-template-columns:360px 1fr; gap:18px; }
+  @media (max-width:860px) { .container { grid-template-columns:1fr; } }
+
+  .inputs-panel { display:flex; flex-direction:column; gap:14px; }
+  .section-card { background:var(--panel); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .section-header { background:var(--panel2); padding:9px 13px; display:flex; align-items:center; gap:9px; border-bottom:1px solid var(--border); }
+  .section-num { width:20px; height:20px; border-radius:50%; background:var(--gold); color:var(--dark); font-family:'Syne',sans-serif; font-weight:700; font-size:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .section-title { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; }
+  .section-body { padding:12px; }
+  .field { margin-bottom:10px; }
+  .field:last-child { margin-bottom:0; }
+  label { display:block; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .field-row { display:flex; align-items:center; background:#0F0E0B; border:1px solid var(--border); border-radius:3px; overflow:hidden; transition:border-color 0.2s; }
+  .field-row:focus-within { border-color:var(--gold); }
+  .field-row input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:7px 9px; }
+  .field-row input::-webkit-inner-spin-button { -webkit-appearance:none; }
+  .unit { padding:7px 9px; font-size:10px; color:var(--gold); border-left:1px solid var(--border); white-space:nowrap; }
+  .field-fixed { background:#0F0E0B; border:1px solid var(--border); border-radius:3px; padding:7px 9px; font-size:12px; color:var(--gold-light); display:flex; align-items:center; justify-content:space-between; }
+  .fixed-note { font-size:9px; color:var(--muted); }
+  .field-note { margin-top:3px; font-size:10px; color:var(--muted); line-height:1.4; }
+  .toggle-row { display:flex; gap:5px; }
+  .toggle-btn { flex:1; padding:6px 4px; border:1px solid var(--border); border-radius:3px; background:transparent; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; cursor:pointer; transition:all 0.15s; text-align:center; }
+  .toggle-btn.active { background:var(--gold); border-color:var(--gold); color:var(--dark); font-weight:600; }
+
+  .results-panel { display:flex; flex-direction:column; gap:14px; }
+
+  .scenario-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:2px; font-family:'Syne',sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+  .badge-a { background:var(--gold-dim); color:var(--gold); border:1px solid rgba(200,168,75,0.3); }
+  .badge-b { background:var(--blue-dim); color:var(--blue); border:1px solid rgba(74,155,223,0.3); }
+
+  .waterfall { background:var(--panel); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .waterfall-header { background:var(--panel2); padding:9px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .waterfall-title { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; }
+  .waterfall-body { padding:4px 0; }
+  .wf-row { display:grid; grid-template-columns:26px 1fr auto auto; align-items:center; gap:7px; padding:6px 13px; border-bottom:1px solid rgba(46,42,34,0.5); transition:background 0.15s; }
+  .wf-row:hover { background:rgba(200,168,75,0.03); }
+  .wf-row:last-child { border-bottom:none; }
+  .wf-row.hl  { background:rgba(200,168,75,0.05); border-top:1px solid rgba(200,168,75,0.15); border-bottom:1px solid rgba(200,168,75,0.15); margin:3px 0; }
+  .wf-row.hlb { background:rgba(74,155,223,0.05); border-top:1px solid rgba(74,155,223,0.15); border-bottom:1px solid rgba(74,155,223,0.15); margin:3px 0; }
+  .wf-row.total-a { background:rgba(200,168,75,0.09); border-top:1px solid var(--gold); border-bottom:none; padding:10px 13px; }
+  .wf-row.total-b { background:rgba(74,155,223,0.09); border-top:1px solid var(--blue); border-bottom:none; padding:10px 13px; }
+  .wf-row.skipped { opacity:0.35; background:rgba(224,85,53,0.04); }
+  .wf-icon { font-size:13px; text-align:center; }
+  .wf-label { font-size:11px; color:var(--text); line-height:1.3; }
+  .wf-label small { display:block; font-size:9px; color:var(--muted); margin-top:1px; }
+  .wf-add { font-size:10px; color:var(--muted); text-align:right; white-space:nowrap; }
+  .wf-cum { font-size:12px; font-weight:500; text-align:right; white-space:nowrap; min-width:90px; }
+  .c-pos  { color:var(--green); }
+  .c-gold { color:var(--gold); }
+  .c-blu  { color:var(--blue); }
+  .c-red  { color:var(--red); }
+  .c-ta   { color:var(--gold); font-size:15px; font-family:'Syne',sans-serif; font-weight:700; }
+  .c-tb   { color:var(--blue); font-size:15px; font-family:'Syne',sans-serif; font-weight:700; }
+
+  .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  @media (max-width:600px) { .summary-grid { grid-template-columns:1fr 1fr; } }
+  .sum-card { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:11px; }
+  .sum-card.feat-a { border-color:var(--gold); background:rgba(200,168,75,0.06); }
+  .sum-card.feat-b { border-color:var(--blue); background:rgba(74,155,223,0.06); }
+  .sum-label { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .sum-val { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--gold); line-height:1; }
+  .sum-val.big { font-size:24px; }
+  .sum-val.blu { color:var(--blue); }
+  .sum-sub { font-size:10px; color:var(--muted); margin-top:3px; }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:flex; flex-direction:column; gap:14px; }
+
+  .info-box { border-radius:4px; padding:10px 13px; font-size:11px; line-height:1.6; }
+  .info-box-b { background:rgba(74,155,223,0.06); border:1px solid rgba(74,155,223,0.2); }
+
+  .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:600px) { .compare-grid { grid-template-columns:1fr; } }
+  .cmp-col { background:#0F0E0B; border-radius:3px; padding:12px; }
+  .cmp-col-a { border:1px solid rgba(200,168,75,0.3); }
+  .cmp-col-b { border:1px solid rgba(74,155,223,0.3); }
+  .cmp-scenario { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .cmp-scenario-a { color:var(--gold); } .cmp-scenario-b { color:var(--blue); }
+  .cmp-row { display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid var(--border); font-size:11px; }
+  .cmp-row:last-child { border-bottom:none; }
+  .cmp-key { color:var(--muted); font-size:10px; }
+  .cmp-val-a { color:var(--gold); font-weight:500; }
+  .cmp-val-b { color:var(--blue); font-weight:500; }
+  .verdict { margin-top:12px; padding:10px 13px; border-radius:3px; font-size:11px; text-align:center; font-family:'Syne',sans-serif; font-weight:700; }
+  .verdict.cheaper { background:rgba(91,173,111,0.1); color:var(--green); border:1px solid rgba(91,173,111,0.3); }
+  .verdict.pricier { background:rgba(224,85,53,0.1); color:var(--red); border:1px solid rgba(224,85,53,0.3); }
+
+  .assumptions { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:12px; }
+  .assumptions-title { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--gold); margin-bottom:8px; }
+  .ass-item { display:flex; gap:7px; margin-bottom:5px; font-size:10px; color:var(--muted); line-height:1.4; }
+  .ass-item::before { content:'›'; color:var(--gold); flex-shrink:0; }
+  .ass-item strong { color:var(--text); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">Calculadora de Precios de Importación — 2 Escenarios</div>
+  <h1>Cerveza Húngara → <span>Taiwan</span> · Simple Mart</h1>
+  <div class="route">
+    <div class="rdot"></div><span>EXW Hungría</span>
+    <div class="rline"></div><div class="rdot"></div><span>CIF Taipei</span>
+    <div class="rline"></div><div class="rdot"></div><span>Aduana TW</span>
+    <div class="rline"></div><div class="rdot"></div>
+    <span style="color:var(--gold)">A: Distribuidor</span>
+    <span style="color:var(--muted)">·</span>
+    <div class="rdot" style="background:var(--blue)"></div>
+    <span style="color:var(--blue)">B: Simple Mart Importador</span>
+    <div class="rline"></div><div class="rdot"></div><span>Retail</span>
+  </div>
+</div>
+
+<div class="mode-bar">
+  <div class="mode-tab active-a" onclick="setMode('A')">🟡 A — Vía Distribuidor</div>
+  <div class="mode-sep"></div>
+  <div class="mode-tab" onclick="setMode('B')">🔵 B — Simple Mart Importador</div>
+  <div class="mode-sep"></div>
+  <div class="mode-tab" onclick="setMode('C')">⚖️ Comparativa A vs B</div>
+</div>
+
+<div class="container">
+
+  <!-- INPUTS -->
+  <div class="inputs-panel">
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-num">1</div><div class="section-title">Producto &amp; Contenedor</div></div>
+      <div class="section-body">
+        <div class="field">
+          <label>Precio EXW del productor (por unidad)</label>
+          <div class="field-row"><input type="number" id="exw" value="0.65" step="0.01" min="0.01" oninput="calc()"><div class="unit">EUR / ud</div></div>
+        </div>
+        <div class="field">
+          <label>Formato</label>
+          <div class="toggle-row">
+            <button class="toggle-btn" onclick="setFormat(this,0.33)">330ml lata</button>
+            <button class="toggle-btn" onclick="setFormat(this,0.33)">330ml botella</button>
+            <button class="toggle-btn active" onclick="setFormat(this,0.50)">500ml lata</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Litros por unidad</label>
+          <div class="field-row"><input type="number" id="litros" value="0.50" step="0.01" min="0.1" oninput="calc()"><div class="unit">litros</div></div>
+        </div>
+        <div class="field">
+          <label>Unidades por caja</label>
+          <div class="field-row"><input type="number" id="upcaja" value="24" min="1" oninput="calc()"><div class="unit">uds</div></div>
+        </div>
+        <div class="field">
+          <label>Cajas por palé</label>
+          <div class="field-row"><input type="number" id="cajaspale" value="72" min="1" oninput="calc()"><div class="unit">cajas</div></div>
+        </div>
+        <div class="field">
+          <label>Palés por contenedor 40ft</label>
+          <div class="field-row"><input type="number" id="paletscont" value="24" min="1" oninput="calc()"><div class="unit">palés</div></div>
+        </div>
+        <div class="field">
+          <label>Total unidades / contenedor</label>
+          <div class="field-fixed"><span id="total-units-display">41,472 uds</span><span class="fixed-note">calculado automáticamente</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-num">2</div><div class="section-title">Logística EXW → CIF Taipei</div></div>
+      <div class="section-body">
+        <div class="field">
+          <label>Transporte terrestre → Puerto EU</label>
+          <div class="field-row"><input type="number" id="trucking" value="1200" step="50" oninput="calc()"><div class="unit">EUR / 40ft</div></div>
+        </div>
+        <div class="field">
+          <label>Flete marítimo Europa → Taipei (40ft FCL)</label>
+          <div class="field-row"><input type="number" id="flete" value="2200" step="100" oninput="calc()"><div class="unit">USD / 40ft</div></div>
+          <div class="field-note">Rango real Q1 2026: $2,000–$4,500 (FBX index).</div>
+        </div>
+        <div class="field">
+          <label>Seguro marítimo CIF</label>
+          <div class="field-fixed"><span>0.35%</span><span class="fixed-note">sobre valor FOB</span></div>
+        </div>
+        <div class="field">
+          <label>Broker aduanero Taipei</label>
+          <div class="field-row"><input type="number" id="broker" value="250" step="10" oninput="calc()"><div class="unit">USD / embarque</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-num">3</div><div class="section-title">Impuestos Taiwan (fijos por ley)</div></div>
+      <div class="section-body">
+        <div class="field">
+          <label>Arancel HS 2203 WTO MFN</label>
+          <div class="field-fixed"><span>~10% AVE sobre CIF</span><span class="fixed-note">UNCTAD / TW Customs</span></div>
+        </div>
+        <div class="field">
+          <label>Alcohol Tax (Art.8 Ley Tabaco y Alcohol)</label>
+          <div class="field-fixed"><span>NT$26 / litro</span><span class="fixed-note">Fijo por ley</span></div>
+        </div>
+        <div class="field">
+          <label>Business Tax / VAT</label>
+          <div class="field-fixed"><span>5%</span><span class="fixed-note">Base: CIF + Arancel + Alcohol Tax</span></div>
+        </div>
+        <div class="field">
+          <label>USD / NTD <span style="color:var(--green);font-size:9px">· Live 04/03/2026</span></label>
+          <div class="field-row"><input type="number" id="usdntd" value="31.43" step="0.01" oninput="calc()"><div class="unit">NTD/USD</div></div>
+          <div class="field-note">Fuente: Investing.com / Wise · 04/03/2026. Rango del día: 31.39–31.49.</div>
+        </div>
+        <div class="field">
+          <label>EUR / USD <span style="color:var(--green);font-size:9px">· Live 04/03/2026</span></label>
+          <div class="field-row"><input type="number" id="eurusd" value="1.1635" step="0.0001" oninput="calc()"><div class="unit">USD/EUR</div></div>
+          <div class="field-note">Fuente: TradingEconomics · 04/03/2026. EUR en mínimos de 1.5 meses por tensión en Oriente Medio.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-num">4</div><div class="section-title">Márgenes Cadena de Valor</div></div>
+      <div class="section-body">
+        <div class="field" id="field-dist">
+          <label>Margen distribuidor Taiwan <span style="color:var(--gold);font-size:9px">· Solo Escenario A</span></label>
+          <div class="field-row"><input type="number" id="marg_dist" value="28" step="1" min="5" oninput="calc()"><div class="unit">% gross margin</div></div>
+          <div class="field-note">Típico importador bebidas alcohólicas TW: 25–35%.</div>
+        </div>
+        <div class="field">
+          <label>Margen retail Simple Mart</label>
+          <div class="field-row"><input type="number" id="marg_retail" value="25" step="1" min="5" oninput="calc()"><div class="unit">% gross margin</div></div>
+        </div>
+        <div class="field" id="field-smcost" style="display:none">
+          <label>Costo operativo importación SM <span style="color:var(--blue);font-size:9px">· Solo Escenario B</span></label>
+          <div class="field-row"><input type="number" id="sm_import_cost" value="8" step="1" min="0" oninput="calc()"><div class="unit">% sobre landed</div></div>
+          <div class="field-note">Licencia alcohol MOF Taiwan, staff aduana, almacén. Estimado: 6–12%.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-panel">
+
+    <!-- TAB A -->
+    <div class="tab-content active" id="tab-A">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="scenario-badge badge-a">🟡 Escenario A — Vía Distribuidor</div>
+        <span style="font-size:10px;color:var(--muted)">Cadena con intermediario importador</span>
+      </div>
+      <div class="waterfall">
+        <div class="waterfall-header">
+          <div class="waterfall-title">Desglose por Unidad — Escenario A</div>
+          <span style="font-size:10px;color:var(--muted)">Tú → Distribuidor → Simple Mart → Consumidor</span>
+        </div>
+        <div class="waterfall-body" id="wf-a"></div>
+      </div>
+      <div class="summary-grid">
+        <div class="sum-card feat-a" style="grid-column:span 2">
+          <div class="sum-label">Precio Retail al Consumidor — Escenario A</div>
+          <div class="sum-val big" id="sA-retail-ntd">—</div>
+          <div class="sum-sub" id="sA-retail-usd">—</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Tu precio EXW de venta</div>
+          <div class="sum-val" id="sA-sell">—</div>
+          <div class="sum-sub" id="sA-sell-s">—</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Landed cost unitario</div>
+          <div class="sum-val" id="sA-landed">—</div>
+          <div class="sum-sub">Post-aduana TW</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Impuestos TW / unidad</div>
+          <div class="sum-val" style="color:var(--red)" id="sA-taxes">—</div>
+          <div class="sum-sub" id="sA-taxes-pct">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB B -->
+    <div class="tab-content" id="tab-B">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="scenario-badge badge-b">🔵 Escenario B — Simple Mart como Importador Directo</div>
+      </div>
+      <div class="info-box info-box-b">
+        <strong style="color:var(--blue)">¿Qué cambia?</strong> Simple Mart elimina al distribuidor y tramita directamente la importación.
+        Necesita <strong>licencia de importador de alcohol en Taiwan</strong> (MOF / BATC) y asume gestión de aduana, almacén y logística de entrada.
+        A cambio, captura el margen del distribuidor. <strong>Tu precio de venta no cambia</strong> — o incluso puedes negociar condiciones mejores dado que tratas con el retailer final directamente.
+      </div>
+      <div class="waterfall">
+        <div class="waterfall-header">
+          <div class="waterfall-title">Desglose por Unidad — Escenario B</div>
+          <span style="font-size:10px;color:var(--blue)">Tú → Simple Mart (importa + vende) → Consumidor</span>
+        </div>
+        <div class="waterfall-body" id="wf-b"></div>
+      </div>
+      <div class="summary-grid">
+        <div class="sum-card feat-b" style="grid-column:span 2">
+          <div class="sum-label">Precio Retail al Consumidor — Escenario B</div>
+          <div class="sum-val big blu" id="sB-retail-ntd">—</div>
+          <div class="sum-sub" id="sB-retail-usd">—</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Tu precio EXW de venta</div>
+          <div class="sum-val blu" id="sB-sell">—</div>
+          <div class="sum-sub" id="sB-sell-s">igual en ambos escenarios</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Diferencia retail vs Escenario A</div>
+          <div class="sum-val" id="sB-diff">—</div>
+          <div class="sum-sub" id="sB-diff-s">—</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Margen bruto SM / unidad</div>
+          <div class="sum-val blu" id="sB-sm-margin">—</div>
+          <div class="sum-sub" id="sB-sm-margin-s">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB C -->
+    <div class="tab-content" id="tab-C">
+      <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">⚖️ Comparativa Escenarios A vs B</div>
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:14px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Precio por unidad — Por eslabón de la cadena</div>
+        <div class="compare-grid">
+          <div class="cmp-col cmp-col-a">
+            <div class="cmp-scenario cmp-scenario-a">🟡 Escenario A — Vía Distribuidor</div>
+            <div class="cmp-row"><span class="cmp-key">Landed cost</span><span class="cmp-val-a" id="c-a-lnd">—</span></div>
+            <div class="cmp-row"><span class="cmp-key">Tu venta al distribuidor</span><span class="cmp-val-a" id="c-a-sell">—</span></div>
+            <div class="cmp-row"><span class="cmp-key">Distribuidor vende a SM</span><span class="cmp-val-a" id="c-a-dist">—</span></div>
+            <div class="cmp-row" style="border-top:1px solid rgba(200,168,75,0.3);margin-top:4px;padding-top:8px">
+              <span class="cmp-key" style="color:var(--text)"><strong>Retail consumidor</strong></span>
+              <span class="cmp-val-a" style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px" id="c-a-retail">—</span>
+            </div>
+          </div>
+          <div class="cmp-col cmp-col-b">
+            <div class="cmp-scenario cmp-scenario-b">🔵 Escenario B — SM Importador</div>
+            <div class="cmp-row"><span class="cmp-key">Landed cost</span><span class="cmp-val-b" id="c-b-lnd">—</span></div>
+            <div class="cmp-row"><span class="cmp-key">Tu venta a Simple Mart</span><span class="cmp-val-b" id="c-b-sell">—</span></div>
+            <div class="cmp-row"><span class="cmp-key">Costo operativo importación SM</span><span class="cmp-val-b" id="c-b-smcost">—</span></div>
+            <div class="cmp-row" style="border-top:1px solid rgba(74,155,223,0.3);margin-top:4px;padding-top:8px">
+              <span class="cmp-key" style="color:var(--text)"><strong>Retail consumidor</strong></span>
+              <span class="cmp-val-b" style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px" id="c-b-retail">—</span>
+            </div>
+          </div>
+        </div>
+        <div id="c-verdict"></div>
+      </div>
+
+      <div class="waterfall">
+        <div class="waterfall-header">
+          <div class="waterfall-title">¿Quién gana y quién pierde?</div>
+        </div>
+        <div class="waterfall-body" id="wf-c"></div>
+      </div>
+    </div>
+
+    <!-- ASSUMPTIONS (always visible) -->
+    <div class="assumptions">
+      <div class="assumptions-title">⚑ Supuestos y Fuentes</div>
+      <div class="ass-item"><strong>Arancel TW HS 2203:</strong> ~10% AVE sobre CIF. Fuente: Taiwan Customs / UNCTAD.</div>
+      <div class="ass-item"><strong>Alcohol Tax NT$26/litro (cerveza):</strong> Art.8 Tobacco &amp; Alcohol Tax Act Taiwan. Fijo por ley. Fuente: Taichung Customs / Invest Taiwan.</div>
+      <div class="ass-item"><strong>Business Tax 5%:</strong> Base = (CIF + Arancel + Alcohol Tax) × 5%. Fuente: Taiwan Customs Act.</div>
+      <div class="ass-item"><strong>Escenario B — Licencia importador alcohol Taiwan:</strong> Requiere registro en MOF (Ministry of Finance) y Bureau of Alcohol &amp; Tobacco Control. Simple Mart como cadena cotizada tiene capacidad de tramitarlo. Fuente: MOF TW / BATC.</div>
+      <div class="ass-item"><strong>Costo operativo importación SM (Esc. B):</strong> Estimado 6–12% del landed cost. Staff aduanero, almacén, tramitación de licencia. Fuente: estimado industria retail TW / Euromonitor.</div>
+      <div class="ass-item"><strong>Simple Mart (美廉社, TWSE: 2945):</strong> 800+ tiendas de barrio en Taiwan. Subsidiaria Mercuries &amp; Associates + Sumitomo Corp. Capacidad logística y financiera para importar directamente. Fuente: TWSE / Bloomberg.</div>
+      <div class="ass-item"><strong>Contenedor 40ft:</strong> 24 palés × 72 cajas × 24 uds = 41,472 uds lata 500ml. Peso bruto ~22,000 kg (bajo límite 26,500 kg neto 40ft std).</div>
+      <div class="ass-item"><strong>Flete 40ft Europa–Asia Q1 2026:</strong> $2,000–$4,500 USD/FCL. Fuente: Freightos Baltic Index (FBX).</div>
+      <div class="ass-item" style="color:var(--red)"><strong>Aviso legal:</strong> Calculadora orientativa. Verifica aranceles en portal.sw.nat.gov.tw. Márgenes son negociados. Consulta asesor legal taiwanés para licencia de importador de alcohol (BATC).</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function setMode(m) {
+  const tabs = document.querySelectorAll('.mode-tab');
+  tabs.forEach(t => t.classList.remove('active-a','active-b','active-c'));
+  if(m==='A') tabs[0].classList.add('active-a');
+  if(m==='B') tabs[1].classList.add('active-b');
+  if(m==='C') tabs[2].classList.add('active-c');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+m).classList.add('active');
+  document.getElementById('field-dist').style.display = (m==='B') ? 'none' : 'block';
+  document.getElementById('field-smcost').style.display = (m==='B'||m==='C') ? 'block' : 'none';
+  calc();
+}
+
+function setFormat(btn, l) {
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('litros').value = l;
+  calc();
+}
+
+function fmt(n, d=2) {
+  if(isNaN(n)||!isFinite(n)) return '—';
+  return n.toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+
+function R(icon, label, sub, add, cum, cls='c-pos') {
+  return `<div class="wf-row"><div class="wf-icon">${icon}</div><div class="wf-label">${label}<small>${sub}</small></div><div class="wf-add">${add}</div><div class="wf-cum ${cls}">${cum}</div></div>`;
+}
+function HL(icon, label, sub, add, cum, cls='c-gold', extra='hl') {
+  return `<div class="wf-row ${extra}"><div class="wf-icon">${icon}</div><div class="wf-label">${label}<small>${sub}</small></div><div class="wf-add">${add}</div><div class="wf-cum ${cls}">${cum}</div></div>`;
+}
+function SKIP(icon, label, sub) {
+  return `<div class="wf-row skipped"><div class="wf-icon">${icon}</div><div class="wf-label">${label}<small>${sub}</small></div><div class="wf-add" style="color:var(--red)">ELIMINADO</div><div class="wf-cum c-red">— —</div></div>`;
+}
+function TOT(label, sub, add, cum, cls='total-a', vcls='c-ta') {
+  return `<div class="wf-row ${cls}"><div class="wf-icon">🛒</div><div class="wf-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:12px">${label}<small style="font-family:'IBM Plex Mono';font-weight:400;font-size:9px">${sub}</small></div><div class="wf-add">${add}</div><div class="wf-cum ${vcls}">${cum}</div></div>`;
+}
+
+function calc() {
+  const exw_eur    = parseFloat(document.getElementById('exw').value)||0;
+  const litros     = parseFloat(document.getElementById('litros').value)||0.5;
+  const upcaja     = parseInt(document.getElementById('upcaja').value)||24;
+  const cajaspale  = parseInt(document.getElementById('cajaspale').value)||72;
+  const paletscont = parseInt(document.getElementById('paletscont').value)||24;
+  const N          = paletscont * cajaspale * upcaja;
+  const trucking   = parseFloat(document.getElementById('trucking').value)||1200;
+  const flete_usd  = parseFloat(document.getElementById('flete').value)||2200;
+  const broker     = parseFloat(document.getElementById('broker').value)||250;
+  const usdntd     = parseFloat(document.getElementById('usdntd').value)||31.43;
+  const eurusd     = parseFloat(document.getElementById('eurusd').value)||1.1635;
+  const md         = parseFloat(document.getElementById('marg_dist').value)/100||0.28;
+  const mr         = parseFloat(document.getElementById('marg_retail').value)/100||0.25;
+  const smc        = parseFloat(document.getElementById('sm_import_cost').value)/100||0.08;
+
+  document.getElementById('total-units-display').textContent = N.toLocaleString()+' uds';
+
+  const T = u => u * usdntd;
+
+  // Tu precio de venta = EXW convertido a USD. Fin.
+  const exw_usd = exw_eur * eurusd;
+
+  // Logística que paga el comprador (distribuidor o SM)
+  const tr_u    = (trucking * eurusd) / N;
+  const fl_u    = flete_usd / N;
+  const bk_u    = broker / N;
+  const fob     = exw_usd + tr_u;
+  const seg     = fob * 0.0035;
+  const cif     = fob + fl_u + seg;
+
+  // Impuestos Taiwan — paga el importador (distribuidor en A, SM en B)
+  const aran    = cif * 0.10;
+  const alc_ntd = 26 * litros;
+  const alc_usd = alc_ntd / usdntd;
+  const bvat    = cif + aran + alc_usd;
+  const vat     = bvat * 0.05;
+  const taxes   = aran + alc_usd + vat;
+
+  // Landed cost = lo que le cuesta al importador poner la mercancía en TW
+  const landed  = cif + taxes + bk_u;
+
+  // ── ESCENARIO A: Distribuidor importa, vende a SM, SM vende al consumidor ──
+  // Tu precio EXW es lo que cobra tú. El distribuidor paga además la logística + impuestos.
+  // El distribuidor aplica su margen sobre el landed cost para vender a SM.
+  const a_dist_venta = landed / (1 - md);        // precio al que dist. vende a SM
+  const a_retail     = a_dist_venta / (1 - mr);  // precio consumidor
+
+  // ── ESCENARIO B: Simple Mart importa directamente ──
+  // SM paga EXW + logística + impuestos = landed cost
+  // SM asume además costos operativos de importación propia
+  const b_smcost  = landed * smc;
+  const b_base    = landed + b_smcost;            // base de SM antes de margen retail
+  const b_retail  = b_base / (1 - mr);           // precio consumidor
+
+  const diff_ntd = T(a_retail) - T(b_retail);
+  const diff_pct = diff_ntd / T(a_retail) * 100;
+
+  const sm_margin_A = a_retail - a_dist_venta;   // margen bruto SM en escenario A
+  const sm_margin_B = b_retail - b_base;          // margen bruto SM en escenario B
+
+  // ── WF-A ──
+  let hA = '';
+  hA += HL('🇭🇺','TU PRECIO EXW — Precio de venta de tu empresa','En fábrica. El distribuidor paga todo lo demás.','',`${fmt(exw_usd,4)} USD  /  NT$${fmt(T(exw_usd),2)}`,'c-gold');
+  hA += R('🚛','Transporte terrestre → Puerto EU','Lo paga el distribuidor (prorrateado en 40ft)',`+${fmt(tr_u,4)} USD`,`${fmt(fob,4)} USD`);
+  hA += R('🚢','Flete marítimo 40ft FCL Europa→Taipei','Lo paga el distribuidor',`+${fmt(fl_u,4)} USD`,`${fmt(fob+fl_u,4)} USD`);
+  hA += R('🛡️','Seguro CIF (0.35% FOB)','Lo paga el distribuidor',`+${fmt(seg,4)} USD`,`${fmt(cif,4)} USD`);
+  hA += HL('📦','VALOR CIF – Puerto Taipei','Base imponible aduana TW','',`${fmt(cif,4)} USD`);
+  hA += R('🏛️','Arancel HS 2203 (~10% AVE WTO MFN)','Lo paga el distribuidor en aduana',`+${fmt(aran,4)} USD`,`${fmt(cif+aran,4)} USD`);
+  hA += `<div class="wf-row"><div class="wf-icon">🍺</div><div class="wf-label">Alcohol Tax NT$26/litro<small>Art.8 Tobacco & Alcohol Tax Act — lo paga el distribuidor</small></div><div class="wf-add">+NT$${fmt(alc_ntd,2)} (+${fmt(alc_usd,4)} USD)</div><div class="wf-cum c-pos">${fmt(cif+aran+alc_usd,4)} USD</div></div>`;
+  hA += R('💹','Business Tax / VAT Taiwan (5%)','Lo paga el distribuidor',`+${fmt(vat,4)} USD`,`${fmt(cif+taxes,4)} USD`);
+  hA += R('📋','Broker aduanero Taipei','Lo paga el distribuidor',`+${fmt(bk_u,4)} USD`,`${fmt(landed,4)} USD`);
+  hA += HL('🏭','LANDED COST del distribuidor','Lo que le cuesta poner la cerveza en Taiwan','',`${fmt(landed,4)} USD / NT$${fmt(T(landed),2)}`);
+  hA += R('🔄',`Margen distribuidor (${(md*100).toFixed(0)}% GM sobre landed)`,'Su beneficio por importar y distribuir a SM',`+${fmt(a_dist_venta-landed,4)} USD`,`${fmt(a_dist_venta,4)} USD`,'c-pos');
+  hA += HL('🏪','Simple Mart compra al distribuidor','Precio de compra del retailer','',`${fmt(a_dist_venta,4)} USD / NT$${fmt(T(a_dist_venta),2)}`);
+  hA += TOT(`PRECIO RETAIL — Escenario A`,`SM aplica ${(mr*100).toFixed(0)}% GM sobre precio que pagó al distribuidor`,`+${fmt(a_retail-a_dist_venta,4)} USD`,`NT$${fmt(T(a_retail),1)}  /  ${fmt(a_retail,3)} USD`);
+  document.getElementById('wf-a').innerHTML = hA;
+
+  // ── WF-B ──
+  let hB = '';
+  hB += HL('🇭🇺','TU PRECIO EXW — Precio de venta de tu empresa','Idéntico al Escenario A. Simple Mart paga todo lo demás.','',`${fmt(exw_usd,4)} USD  /  NT$${fmt(T(exw_usd),2)}`,'c-gold','hlb');
+  hB += R('🚛','Transporte terrestre → Puerto EU','Lo paga Simple Mart (prorrateado en 40ft)',`+${fmt(tr_u,4)} USD`,`${fmt(fob,4)} USD`);
+  hB += R('🚢','Flete marítimo 40ft FCL Europa→Taipei','Lo paga Simple Mart',`+${fmt(fl_u,4)} USD`,`${fmt(fob+fl_u,4)} USD`);
+  hB += R('🛡️','Seguro CIF (0.35% FOB)','Lo paga Simple Mart',`+${fmt(seg,4)} USD`,`${fmt(cif,4)} USD`);
+  hB += HL('📦','VALOR CIF – Puerto Taipei','Simple Mart figura como consignatario/importador','',`${fmt(cif,4)} USD`,'c-blu','hlb');
+  hB += R('🏛️','Arancel HS 2203 (~10% AVE WTO MFN)','Simple Mart paga directamente en aduana',`+${fmt(aran,4)} USD`,`${fmt(cif+aran,4)} USD`);
+  hB += `<div class="wf-row"><div class="wf-icon">🍺</div><div class="wf-label">Alcohol Tax NT$26/litro<small>Art.8 — Simple Mart declara como importador registrado (BATC)</small></div><div class="wf-add">+NT$${fmt(alc_ntd,2)} (+${fmt(alc_usd,4)} USD)</div><div class="wf-cum c-pos">${fmt(cif+aran+alc_usd,4)} USD</div></div>`;
+  hB += R('💹','Business Tax / VAT Taiwan (5%)','Lo paga Simple Mart — idéntico al Escenario A',`+${fmt(vat,4)} USD`,`${fmt(cif+taxes,4)} USD`);
+  hB += R('📋','Broker aduanero Taipei','Lo paga Simple Mart',`+${fmt(bk_u,4)} USD`,`${fmt(landed,4)} USD`);
+  hB += HL('🏭','LANDED COST de Simple Mart — idéntico al Escenario A','Los impuestos TW no cambian con quién importa','',`${fmt(landed,4)} USD / NT$${fmt(T(landed),2)}`,'c-blu','hlb');
+  hB += SKIP('🔄','Distribuidor Taiwan','Eslabón eliminado. Simple Mart importa directamente.');
+  hB += R('🏢',`Costo operativo importación SM (${(smc*100).toFixed(0)}% sobre landed)`,'Licencia BATC, staff aduana, almacén de entrada',`+${fmt(b_smcost,4)} USD`,`${fmt(b_base,4)} USD`,'c-blu');
+  hB += HL('🏪','Base de Simple Mart para calcular precio retail','Landed cost + costos operativos propios de SM','',`${fmt(b_base,4)} USD / NT$${fmt(T(b_base),2)}`,'c-blu','hlb');
+  hB += TOT(`PRECIO RETAIL — Escenario B`,`SM aplica ${(mr*100).toFixed(0)}% GM sobre su base propia`,`+${fmt(b_retail-b_base,4)} USD`,`NT$${fmt(T(b_retail),1)}  /  ${fmt(b_retail,3)} USD`,'total-b','c-tb');
+  document.getElementById('wf-b').innerHTML = hB;
+
+  // ── WF-C ──
+  const gain = sm_margin_B - sm_margin_A;
+  let hC = '';
+  hC += HL('🇭🇺','TU PRECIO EXW — igual en A y B','Tu posición no cambia en ningún escenario','',`${fmt(exw_usd,4)} USD ✓`,'c-gold');
+  hC += R('⚖️','Landed cost — IGUAL en ambos escenarios','Los impuestos TW son idénticos independientemente de quién importa','',`${fmt(landed,4)} USD ✓`,'c-pos');
+  hC += HL('🔄',`Margen distribuidor (${(md*100).toFixed(0)}% GM) — presente en A, eliminado en B`,'Esta capa desaparece cuando SM importa directamente',`A: +${fmt(a_dist_venta-landed,4)} USD/ud`,`B: ELIMINADO`,'c-red','hl');
+  hC += R('🏢',`Costo operativo importación SM (${(smc*100).toFixed(0)}%) — solo Escenario B`,'SM asume gestión que antes hacía el distribuidor',`B: +${fmt(b_smcost,4)} USD/ud`,`A: 0`,'c-blu');
+  hC += R('🏪','Margen bruto Simple Mart / unidad',`A: ${fmt(sm_margin_A,4)} USD  |  B: ${fmt(sm_margin_B,4)} USD`,`diff: ${gain>0?'+':''}${fmt(gain,4)} USD`,gain>0?`SM gana +${fmt(T(gain),2)} NT$ más/ud en B`:`SM gana ${fmt(T(gain),2)} NT$ menos/ud en B`, gain>0?'c-pos':'c-red');
+  hC += `<div class="wf-row total-a"><div class="wf-icon">🛒</div><div class="wf-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:12px">PRECIO RETAIL COMPARADO<small style="font-size:9px;font-weight:400;font-family:'IBM Plex Mono'">Lo que paga el consumidor final en Simple Mart</small></div><div class="wf-add" style="color:var(--gold)">A: NT$${fmt(T(a_retail),1)}</div><div class="wf-cum c-tb">B: NT$${fmt(T(b_retail),1)}</div></div>`;
+  document.getElementById('wf-c').innerHTML = hC;
+
+  // ── COMPARE BOX ──
+  document.getElementById('c-a-lnd').textContent = `NT$${fmt(T(landed),2)} / $${fmt(landed,4)}`;
+  document.getElementById('c-a-sell').textContent = `NT$${fmt(T(exw_usd),2)} / $${fmt(exw_usd,4)} (EXW)`;
+  document.getElementById('c-a-dist').textContent = `NT$${fmt(T(a_dist_venta),2)} / $${fmt(a_dist_venta,4)}`;
+  document.getElementById('c-a-retail').textContent = `NT$${fmt(T(a_retail),1)}`;
+  document.getElementById('c-b-lnd').textContent = `NT$${fmt(T(landed),2)} / $${fmt(landed,4)}`;
+  document.getElementById('c-b-sell').textContent = `NT$${fmt(T(exw_usd),2)} / $${fmt(exw_usd,4)} (EXW)`;
+  document.getElementById('c-b-smcost').textContent = `NT$${fmt(T(b_smcost),2)} / $${fmt(b_smcost,4)}`;
+  document.getElementById('c-b-retail').textContent = `NT$${fmt(T(b_retail),1)}`;
+
+  const vrd = document.getElementById('c-verdict');
+  if(diff_ntd > 0) {
+    vrd.innerHTML = `<div class="verdict cheaper">✅ Escenario B es NT$${fmt(diff_ntd,1)} más barato para el consumidor (${diff_pct.toFixed(1)}% menos). Simple Mart captura más margen bruto: NT$${fmt(T(sm_margin_B),2)} vs NT$${fmt(T(sm_margin_A),2)} por unidad.</div>`;
+  } else {
+    vrd.innerHTML = `<div class="verdict pricier">⚠️ Escenario B sale NT$${fmt(-diff_ntd,1)} MÁS CARO (${(-diff_pct).toFixed(1)}% más). El costo operativo de importación SM supera el ahorro del margen del distribuidor. Reduce el % de costo operativo SM para ver el punto de equilibrio.</div>`;
+  }
+
+  // ── SUMMARIES ──
+  document.getElementById('sA-retail-ntd').textContent = `NT$ ${fmt(T(a_retail),1)}`;
+  document.getElementById('sA-retail-usd').textContent = `≈ USD ${fmt(a_retail,3)} por unidad`;
+  document.getElementById('sA-sell').textContent = `USD ${fmt(exw_usd,4)}`;
+  document.getElementById('sA-sell-s').textContent = `NT$ ${fmt(T(exw_usd),2)} — tu precio EXW`;
+  document.getElementById('sA-landed').textContent = `USD ${fmt(landed,3)}`;
+  document.getElementById('sA-taxes').textContent = `USD ${fmt(taxes,4)}`;
+  document.getElementById('sA-taxes-pct').textContent = `${(taxes/cif*100).toFixed(1)}% sobre CIF`;
+
+  document.getElementById('sB-retail-ntd').textContent = `NT$ ${fmt(T(b_retail),1)}`;
+  document.getElementById('sB-retail-usd').textContent = `≈ USD ${fmt(b_retail,3)} por unidad`;
+  document.getElementById('sB-sell').textContent = `USD ${fmt(exw_usd,4)}`;
+  document.getElementById('sB-diff').textContent = diff_ntd>0 ? `NT$ ${fmt(diff_ntd,1)} más barato` : `NT$ ${fmt(-diff_ntd,1)} más caro`;
+  document.getElementById('sB-diff').style.color = diff_ntd>0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('sB-diff-s').textContent = `${Math.abs(diff_pct).toFixed(1)}% ${diff_ntd>0?'menos':'más'} que Escenario A`;
+  document.getElementById('sB-sm-margin').textContent = `USD ${fmt(sm_margin_B,4)}`;
+  document.getElementById('sB-sm-margin-s').textContent = gain>0 ? `+${fmt(T(gain),2)} NT$ más que Esc. A` : `${fmt(T(gain),2)} NT$ vs Esc. A`;
+}
+
+calc();
+</script>
+</body>
+</html>
